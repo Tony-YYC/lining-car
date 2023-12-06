@@ -8,5 +8,4 @@ void setup()
 void loop()
 {
     car.run_without_tracing();
-    delay(100);
 }
