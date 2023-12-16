@@ -42,9 +42,11 @@ class Motor
     // A组电机驱动
     const int A_PWM = 6; // 控制速度
     const int A_DIR = 7; // 控制方向
+    const int A_DIRECTION = LOW;
     // B组电机驱动
     const int B_PWM = 5; // 控制速度
     const int B_DIR = 4; // 控制方向
+    const int B_DIRECTION = HIGH;
 
     const int servo_pwm_pin = 9;
 
@@ -70,39 +72,39 @@ class Motor
         analogWrite(B_PWM, speed);
     }
   public:
-    Motor()
+    void init()
     {
         pinMode(A_DIR, OUTPUT);
         pinMode(A_PWM, OUTPUT);
         pinMode(B_DIR, OUTPUT);
         pinMode(B_PWM, OUTPUT); // 全部都设置为输出
         servo.attach(servo_pwm_pin);
-        offset = servo.read();
     }
     void motor_control(int steer)
     {
         servo.write(offset + steer);
         if(abs(steer) > 30)
         {
-            A_Motor(HIGH,sharp_turn_speed);
-            B_Motor(HIGH,sharp_turn_speed);
+            A_Motor(A_DIRECTION,sharp_turn_speed);
+            B_Motor(B_DIRECTION,sharp_turn_speed);
         }
         else if(abs(steer) > 15)
         {
-            A_Motor(HIGH,turn_speed);
-            B_Motor(HIGH,turn_speed);
+            A_Motor(A_DIRECTION,turn_speed);
+            B_Motor(B_DIRECTION,turn_speed);
         }
         else
         {
-            A_Motor(HIGH,straight_speed);
-            B_Motor(HIGH,straight_speed);
+            A_Motor(A_DIRECTION,straight_speed);
+            B_Motor(B_DIRECTION,straight_speed);
         }
     }
 
     void run_straight()
-    {
-        A_Motor(HIGH,straight_speed);
-        B_Motor(HIGH,straight_speed);
+    { 
+        servo.write(offset);
+        A_Motor(A_DIRECTION,straight_speed);
+        B_Motor(B_DIRECTION,straight_speed);
     }
 };
 
@@ -125,9 +127,9 @@ class Car : private Sensor, private Motor
     }
 
   public:
-    Car()
+    void init()
     {
-        Motor();
+        Motor::init();
     }
 
     void run_with_tracing()
