@@ -48,6 +48,10 @@ class Motor
     const int B_DIR = 4; // 控制方向
     const int B_DIRECTION = HIGH;
 
+    // B组电机驱动
+    const int B_PWM = 5; // 控制速度
+    const int B_DIR = 4; // 控制方向
+
     const int servo_pwm_pin = 9;
 
     Servo servo;
