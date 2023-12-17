@@ -3,10 +3,10 @@ Car car;
 void setup()
 {
     Serial.begin(9600); // 打开串口，设置波特率为9600 bps
-    car.init();
+    car.start();
 }
 
 void loop()
 {
-    car.run_without_tracing();
+    car.run_with_tracing();
 }
