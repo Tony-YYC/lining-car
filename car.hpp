@@ -26,6 +26,9 @@ class Sensor
                     ++count;
                     lineNum = i;
                 }
+                else{
+                    ++count;
+                }
             }
             Serial.print(sensorReading[i]);
             Serial.print('-');
@@ -41,6 +44,8 @@ class Sensor
             return lineNum + 1;
         else if(count == 2)
             return float(lineNum + lineNum_2) / 2 + 1;
+        else if(count == 5)
+            return -1;
         else
             return 0;
     }
@@ -48,6 +53,7 @@ class Sensor
 class Motor
 {
   private:
+    //A是左电机，B是右电机
     // A组电机驱动
     const int A_PWM = 6; // 控制速度
     const int A_DIR = 7; // 控制方向
@@ -59,7 +65,7 @@ class Motor
 
     const int servo_pwm_pin = 9;
     const int SERVO_LEFT_MAX = 30;
-    const int SERVO_RIGHT_MAX = -60;
+    const int SERVO_RIGHT_MAX = -56;
 
     Servo servo;
 
@@ -67,7 +73,7 @@ class Motor
     
     const int straight_speed = 125;
     const int turn_speed = 120;
-    const int sharp_turn_speed = 100;
+    const int sharp_turn_speed = 80;
 
     // A组电机驱动控制函数
     void A_Motor(int dir, int speed)
@@ -93,18 +99,18 @@ class Motor
     }
     void motor_control(int steer)
     {
-        if(steer < 0) steer *= 1.1;
-        if(steer > SERVO_LEFT_MAX) steer = SERVO_LEFT_MAX; //积分限幅
+        if(steer < 0) steer *= 1.1; //右侧转向补偿
+        if(steer > SERVO_LEFT_MAX) steer = SERVO_LEFT_MAX; //输出限幅
         if(steer < SERVO_RIGHT_MAX) steer = SERVO_RIGHT_MAX;
         Serial.print("steer:");
         Serial.println(steer);
         servo.write(offset + steer);
-        if(abs(steer) > 20)
+        if(abs(steer) > 30)
         {
-            A_Motor(A_DIRECTION,sharp_turn_speed);
-            B_Motor(B_DIRECTION,sharp_turn_speed);
+            A_Motor(A_DIRECTION,sharp_turn_speed - 0.4 * steer); //后轮差速辅助转向
+            B_Motor(B_DIRECTION,sharp_turn_speed + 0.4 * steer);
         }
-        else if(abs(steer) > 10)
+        else if(abs(steer) > 20)
         {
             A_Motor(A_DIRECTION,turn_speed);
             B_Motor(B_DIRECTION,turn_speed);
@@ -128,7 +134,7 @@ class Car : protected Sensor, protected Motor
 {
   private:
     const float Kp = 18.0;
-    const float Ki = 0.22;
+    const float Ki = 0.24;
     const float Kd = 43.0;
 
     float error = 0, last_error = 0;
@@ -153,6 +159,15 @@ class Car : protected Sensor, protected Motor
             Serial.print("--pid_output:");
             Serial.print(pid_output);
             Serial.println();
+        }
+        else if (error < 0)
+        {
+            integral = 0;
+            last_error = 0;
+            pid_output = 0;
+            error = 0;
+            Motor::motor_control(0);
+            delay(50);
         }
     }
 
