@@ -53,7 +53,7 @@ class Sensor
 class Motor
 {
   private:
-    //A是左电机，B是右电机
+    //A是右电机，B是左电机
     // A组电机驱动
     const int A_PWM = 6; // 控制速度
     const int A_DIR = 7; // 控制方向
@@ -65,15 +65,15 @@ class Motor
 
     const int servo_pwm_pin = 9;
     const int SERVO_LEFT_MAX = 30;
-    const int SERVO_RIGHT_MAX = -56;
+    const int SERVO_RIGHT_MAX = -58;
 
     Servo servo;
 
     int offset = 120; // 电机的零点
     
-    const int straight_speed = 125;
-    const int turn_speed = 120;
-    const int sharp_turn_speed = 80;
+    const int straight_speed = 200;
+    const int turn_speed = 115;
+    const int sharp_turn_speed = 72;
 
     // A组电机驱动控制函数
     void A_Motor(int dir, int speed)
@@ -107,13 +107,13 @@ class Motor
         servo.write(offset + steer);
         if(abs(steer) > 30)
         {
-            A_Motor(A_DIRECTION,sharp_turn_speed - 0.4 * steer); //后轮差速辅助转向
-            B_Motor(B_DIRECTION,sharp_turn_speed + 0.4 * steer);
+            A_Motor(A_DIRECTION,sharp_turn_speed + 1.2 * steer); //后轮差速辅助转向
+            B_Motor(B_DIRECTION,sharp_turn_speed - 0.5 * steer);
         }
-        else if(abs(steer) > 20)
+        else if(abs(steer) > 10)
         {
-            A_Motor(A_DIRECTION,turn_speed);
-            B_Motor(B_DIRECTION,turn_speed);
+            A_Motor(A_DIRECTION,turn_speed + 0.5 * steer);
+            B_Motor(B_DIRECTION,turn_speed - 0.5 * steer);
         }
         else
         {
@@ -134,8 +134,8 @@ class Car : protected Sensor, protected Motor
 {
   private:
     const float Kp = 18.0;
-    const float Ki = 0.24;
-    const float Kd = 43.0;
+    const float Ki = 0.25;
+    const float Kd = 45.0;
 
     float error = 0, last_error = 0;
     float integral = 0,pid_output = 0;
