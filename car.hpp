@@ -71,9 +71,10 @@ class Motor
 
     int offset = 120; // 电机的零点
     
-    const int straight_speed = 200;
-    const int turn_speed = 115;
-    const int sharp_turn_speed = 72;
+    const int straight_speed = 210;
+    const int light_turn_speed = 160;
+    const int turn_speed = 120;
+    const int sharp_turn_speed = 85;
 
     // A组电机驱动控制函数
     void A_Motor(int dir, int speed)
@@ -99,7 +100,6 @@ class Motor
     }
     void motor_control(int steer)
     {
-        if(steer < 0) steer *= 1.1; //右侧转向补偿
         if(steer > SERVO_LEFT_MAX) steer = SERVO_LEFT_MAX; //输出限幅
         if(steer < SERVO_RIGHT_MAX) steer = SERVO_RIGHT_MAX;
         Serial.print("steer:");
@@ -107,13 +107,18 @@ class Motor
         servo.write(offset + steer);
         if(abs(steer) > 30)
         {
-            A_Motor(A_DIRECTION,sharp_turn_speed + 1.2 * steer); //后轮差速辅助转向
-            B_Motor(B_DIRECTION,sharp_turn_speed - 0.5 * steer);
+            A_Motor(A_DIRECTION,sharp_turn_speed + 1.45 * steer); //后轮差速辅助转向
+            B_Motor(B_DIRECTION,sharp_turn_speed - 0.3 * steer);
+        }
+        else if(abs(steer) > 20)
+        {
+            A_Motor(A_DIRECTION,turn_speed + 0.8 * steer);
+            B_Motor(B_DIRECTION,turn_speed - 0.8 * steer);
         }
         else if(abs(steer) > 10)
         {
-            A_Motor(A_DIRECTION,turn_speed + 0.5 * steer);
-            B_Motor(B_DIRECTION,turn_speed - 0.5 * steer);
+            A_Motor(A_DIRECTION,light_turn_speed + 0.4 * steer);
+            B_Motor(B_DIRECTION,light_turn_speed - 0.4 * steer);
         }
         else
         {
@@ -134,13 +139,13 @@ class Car : protected Sensor, protected Motor
 {
   private:
     const float Kp = 18.0;
-    const float Ki = 0.25;
-    const float Kd = 45.0;
+    const float Ki = 0.26 / 2;
+    const float Kd = 46.0 * 2;
 
     float error = 0, last_error = 0;
     float integral = 0,pid_output = 0;
 
-    const float INTEGRAL_MAX = 60.0;
+    const float INTEGRAL_MAX = 120.0;
 
     void calc_pid()
     {
@@ -167,7 +172,7 @@ class Car : protected Sensor, protected Motor
             pid_output = 0;
             error = 0;
             Motor::motor_control(0);
-            delay(50);
+            delay(20);
         }
     }
 
@@ -181,7 +186,7 @@ class Car : protected Sensor, protected Motor
     {
         calc_pid();
         Motor::motor_control(static_cast<int>(pid_output));
-        delay(10);
+        delay(5);
     }
 
     void run_without_tracing()
