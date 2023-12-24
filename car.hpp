@@ -16,17 +16,18 @@ class Sensor
             sensorReading[i] = analogRead(sensor[i]);
             if (sensorReading[i] < threshold)
             {
-                if(count == 1)
+                if (count == 1)
                 {
                     ++count;
                     lineNum_2 = i;
                 }
-                else if(count == 0)
+                else if (count == 0)
                 {
                     ++count;
                     lineNum = i;
                 }
-                else{
+                else
+                {
                     ++count;
                 }
             }
@@ -42,9 +43,9 @@ class Sensor
         read();
         if (count == 1)
             return lineNum + 1;
-        else if(count == 2)
+        else if (count == 2)
             return float(lineNum + lineNum_2) / 2 + 1;
-        else if(count == 5)
+        else if (count == 5)
             return -1;
         else
             return 0;
@@ -53,28 +54,29 @@ class Sensor
 class Motor
 {
   private:
-    //A是右电机，B是左电机
-    // A组电机驱动
+    // A是右电机，B是左电机
+    //  A组电机驱动
     const int A_PWM = 6; // 控制速度
     const int A_DIR = 7; // 控制方向
     const int A_DIRECTION = LOW;
+
     // B组电机驱动
     const int B_PWM = 5; // 控制速度
     const int B_DIR = 4; // 控制方向
     const int B_DIRECTION = LOW;
 
     const int servo_pwm_pin = 9;
-    const int SERVO_LEFT_MAX = 30;
+    const int SERVO_LEFT_MAX = 28;
     const int SERVO_RIGHT_MAX = -58;
 
     Servo servo;
 
     int offset = 120; // 电机的零点
-    
-    const int straight_speed = 210;
-    const int light_turn_speed = 160;
-    const int turn_speed = 120;
-    const int sharp_turn_speed = 85;
+
+    const int straight_speed = 205;
+    const int light_turn_speed = 180;
+    const int turn_speed = 140;
+    const int sharp_turn_speed = 105;
 
     // A组电机驱动控制函数
     void A_Motor(int dir, int speed)
@@ -89,6 +91,33 @@ class Motor
         digitalWrite(B_DIR, dir);
         analogWrite(B_PWM, speed);
     }
+    void A_Motor_DIR(int dir, int speed)
+    {
+        if (speed >= 0)
+        {
+            digitalWrite(A_DIR, dir);
+            analogWrite(A_PWM, speed);
+        }
+        else
+        {
+            digitalWrite(A_DIR, !dir);
+            analogWrite(A_PWM, -speed);
+        }
+    }
+    void B_Motor_DIR(int dir, int speed)
+    {
+        if (speed >= 0)
+        {
+            digitalWrite(B_DIR, dir);
+            analogWrite(B_PWM, speed);
+        }
+        else
+        {
+            digitalWrite(B_DIR, !dir);
+            analogWrite(B_PWM, -speed);
+        }
+    }
+
   public:
     void init()
     {
@@ -100,38 +129,42 @@ class Motor
     }
     void motor_control(int steer)
     {
-        if(steer > SERVO_LEFT_MAX) steer = SERVO_LEFT_MAX; //输出限幅
-        if(steer < SERVO_RIGHT_MAX) steer = SERVO_RIGHT_MAX;
-        Serial.print("steer:");
-        Serial.println(steer);
-        servo.write(offset + steer);
-        if(abs(steer) > 30)
+        if (steer < 0)
+            steer *= 1.1;
+        if (steer > SERVO_LEFT_MAX)
+            steer = SERVO_LEFT_MAX; // 舵机输出限幅
+        if (steer < SERVO_RIGHT_MAX)
+            steer = SERVO_RIGHT_MAX;
+        if (abs(steer) > 30)
         {
-            A_Motor(A_DIRECTION,sharp_turn_speed + 1.45 * steer); //后轮差速辅助转向
-            B_Motor(B_DIRECTION,sharp_turn_speed - 0.3 * steer);
+            A_Motor_DIR(A_DIRECTION, sharp_turn_speed + 1.2 * steer); // 后轮差速辅助转向
+            B_Motor_DIR(B_DIRECTION, sharp_turn_speed - 1.2 * steer);
         }
-        else if(abs(steer) > 20)
+        else if (abs(steer) > 20)
         {
-            A_Motor(A_DIRECTION,turn_speed + 0.8 * steer);
-            B_Motor(B_DIRECTION,turn_speed - 0.8 * steer);
+            A_Motor_DIR(A_DIRECTION, turn_speed + 0.4 * steer);
+            B_Motor_DIR(B_DIRECTION, turn_speed - 0.4 * steer);
         }
-        else if(abs(steer) > 10)
+        else if (abs(steer) > 10)
         {
-            A_Motor(A_DIRECTION,light_turn_speed + 0.4 * steer);
-            B_Motor(B_DIRECTION,light_turn_speed - 0.4 * steer);
+            A_Motor(A_DIRECTION, light_turn_speed + 0.2 * steer);
+            B_Motor(B_DIRECTION, light_turn_speed - 0.2 * steer);
         }
         else
         {
-            A_Motor(A_DIRECTION,straight_speed);
-            B_Motor(B_DIRECTION,straight_speed);
+            A_Motor(A_DIRECTION, straight_speed);
+            B_Motor(B_DIRECTION, straight_speed);
         }
+        Serial.print("steer:");
+        Serial.println(steer);
+        servo.write(offset + steer);
     }
 
     void run_straight()
-    { 
+    {
         servo.write(offset);
-        A_Motor(A_DIRECTION,straight_speed);
-        B_Motor(B_DIRECTION,straight_speed);
+        A_Motor(A_DIRECTION, straight_speed);
+        B_Motor(B_DIRECTION, straight_speed);
     }
 };
 
@@ -143,7 +176,7 @@ class Car : protected Sensor, protected Motor
     const float Kd = 46.0 * 2;
 
     float error = 0, last_error = 0;
-    float integral = 0,pid_output = 0;
+    float integral = 0, pid_output = 0;
 
     const float INTEGRAL_MAX = 120.0;
 
@@ -152,20 +185,37 @@ class Car : protected Sensor, protected Motor
         error = Sensor::getStatus();
         Serial.print("error:");
         Serial.print(error);
-        if(error > 0)
+        if (error > 0)
         {
             error -= 3;
             integral += error;
-            if(integral > INTEGRAL_MAX) integral = INTEGRAL_MAX; //积分限幅
-            if(integral < -INTEGRAL_MAX) integral = -INTEGRAL_MAX;
+            if (integral > INTEGRAL_MAX)
+                integral = INTEGRAL_MAX; // 积分限幅
+            if (integral < -INTEGRAL_MAX)
+                integral = -INTEGRAL_MAX;
             pid_output = Kp * error + Ki * integral + Kd * (error - last_error);
             last_error = error;
-            
+
             Serial.print("--pid_output:");
             Serial.print(pid_output);
             Serial.println();
         }
-        else if (error < 0)
+        else if (error == 0)
+        {
+            error = last_error;
+            integral += error;
+            if (integral > INTEGRAL_MAX)
+                integral = INTEGRAL_MAX; // 积分限幅
+            if (integral < -INTEGRAL_MAX)
+                integral = -INTEGRAL_MAX;
+            float delta;
+            if (error == 2 && integral > 0)
+                delta == 1;
+            else if (error == -2 && integral < 0)
+                delta == -1;
+            pid_output = Kp * error + Ki * integral + Kd * delta;
+        }
+        else
         {
             integral = 0;
             last_error = 0;
