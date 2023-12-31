@@ -3,7 +3,7 @@ class Sensor
 {
   private:
     const int sensor[5] = {A0, A1, A2, A3, A4};
-    const int threshold = 500;
+    const int threshold = 600;
     int sensorReading[5];
     int lineNum = 0;
     int lineNum_2 = 0;
@@ -66,16 +66,16 @@ class Motor
     const int B_DIRECTION = LOW;
 
     const int servo_pwm_pin = 9;
-    const int SERVO_LEFT_MAX = 28;
-    const int SERVO_RIGHT_MAX = -58;
+    const int SERVO_LEFT_MAX = 32;
+    const int SERVO_RIGHT_MAX = -60;
 
     Servo servo;
 
     int offset = 120; // 电机的零点
 
-    const int straight_speed = 205;
-    const int light_turn_speed = 180;
-    const int turn_speed = 140;
+    const int straight_speed = 220;
+    const int light_turn_speed = 185;
+    const int turn_speed = 145;
     const int sharp_turn_speed = 105;
 
     // A组电机驱动控制函数
@@ -127,14 +127,17 @@ class Motor
         pinMode(B_PWM, OUTPUT); // 全部都设置为输出
         servo.attach(servo_pwm_pin);
     }
-    void motor_control(int steer)
+    bool motor_control(int steer)
     {
+        bool touch_limit = false;
         if (steer < 0)
             steer *= 1.1;
         if (steer > SERVO_LEFT_MAX)
             steer = SERVO_LEFT_MAX; // 舵机输出限幅
+            touch_limit = true;
         if (steer < SERVO_RIGHT_MAX)
             steer = SERVO_RIGHT_MAX;
+            touch_limit = true;
         if (abs(steer) > 30)
         {
             A_Motor_DIR(A_DIRECTION, sharp_turn_speed + 1.2 * steer); // 后轮差速辅助转向
@@ -142,8 +145,8 @@ class Motor
         }
         else if (abs(steer) > 20)
         {
-            A_Motor_DIR(A_DIRECTION, turn_speed + 0.4 * steer);
-            B_Motor_DIR(B_DIRECTION, turn_speed - 0.4 * steer);
+            A_Motor_DIR(A_DIRECTION, turn_speed + 0.5 * steer);
+            B_Motor_DIR(B_DIRECTION, turn_speed - 0.5 * steer);
         }
         else if (abs(steer) > 10)
         {
@@ -158,6 +161,7 @@ class Motor
         Serial.print("steer:");
         Serial.println(steer);
         servo.write(offset + steer);
+        return touch_limit;
     }
 
     void run_straight()
@@ -177,6 +181,7 @@ class Car : protected Sensor, protected Motor
 
     float error = 0, last_error = 0;
     float integral = 0, pid_output = 0;
+    bool anti_saturation = false;
 
     const float INTEGRAL_MAX = 120.0;
 
@@ -193,6 +198,7 @@ class Car : protected Sensor, protected Motor
                 integral = INTEGRAL_MAX; // 积分限幅
             if (integral < -INTEGRAL_MAX)
                 integral = -INTEGRAL_MAX;
+            //if(error * integral < 0) integral = 0; //积分与当前值反向，则积分值清零
             pid_output = Kp * error + Ki * integral + Kd * (error - last_error);
             last_error = error;
 
@@ -235,7 +241,7 @@ class Car : protected Sensor, protected Motor
     void run_with_tracing()
     {
         calc_pid();
-        Motor::motor_control(static_cast<int>(pid_output));
+        anti_saturation = Motor::motor_control(static_cast<int>(pid_output));
         delay(5);
     }
 
